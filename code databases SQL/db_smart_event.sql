@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jul 12, 2026 at 04:25 PM
+-- Generation Time: Jul 15, 2026 at 06:05 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -68,6 +68,32 @@ CREATE TABLE `likes` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `registrations`
+--
+
+CREATE TABLE `registrations` (
+  `id` int(11) NOT NULL,
+  `event_id` int(11) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `nama` varchar(100) NOT NULL,
+  `nim` varchar(30) NOT NULL,
+  `status_user` enum('Mahasiswa','Dosen') NOT NULL,
+  `fakultas` varchar(100) NOT NULL,
+  `program_studi` varchar(100) NOT NULL,
+  `nama_campus` varchar(150) NOT NULL,
+  `registered_at` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Dumping data for table `registrations`
+--
+
+INSERT INTO `registrations` (`id`, `event_id`, `email`, `nama`, `nim`, `status_user`, `fakultas`, `program_studi`, `nama_campus`, `registered_at`) VALUES
+(2, 9, 'suppandi45@gmail.com', 'suppandi', '2412000064', 'Mahasiswa', 'Fakultas Teknik dan Ilmu Komputer (FTIK)', 'Teknik Informatika', 'universitas potensi utama', '2026-07-15 14:49:45');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `users`
 --
 
@@ -111,6 +137,13 @@ ALTER TABLE `likes`
   ADD UNIQUE KEY `unique_like` (`event_id`,`username`);
 
 --
+-- Indexes for table `registrations`
+--
+ALTER TABLE `registrations`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `event_id` (`event_id`);
+
+--
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
@@ -138,6 +171,12 @@ ALTER TABLE `events`
 --
 ALTER TABLE `likes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+
+--
+-- AUTO_INCREMENT for table `registrations`
+--
+ALTER TABLE `registrations`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `users`
