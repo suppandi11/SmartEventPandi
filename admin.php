@@ -63,6 +63,7 @@ if ($result && mysqli_num_rows($result) > 0) {
 $likesCount  = [];
 $likedByMe   = [];
 $commentsData = [];
+$registrantsData = [];
 
 if (!empty($events_data)) {
     $event_ids = array_map(fn($r) => (int)$r['id'], $events_data);
@@ -98,6 +99,16 @@ if (!empty($events_data)) {
         $commentsData[(int)$r['event_id']][] = $r;
     }
     mysqli_stmt_close($stmt);
+
+    // Semua pendaftar (registrasi) untuk event yang tampil
+    $stmt = mysqli_prepare($conn, "SELECT * FROM registrations WHERE event_id IN ($placeholders) ORDER BY registered_at ASC");
+    mysqli_stmt_bind_param($stmt, $types, ...$event_ids);
+    mysqli_stmt_execute($stmt);
+    $res = mysqli_stmt_get_result($stmt);
+    while ($r = mysqli_fetch_assoc($res)) {
+        $registrantsData[(int)$r['event_id']][] = $r;
+    }
+    mysqli_stmt_close($stmt);
 }
 ?>
 <!DOCTYPE html>
@@ -105,7 +116,7 @@ if (!empty($events_data)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Workspace - Smart Event</title>
+    <title>SmartEvent-Suppandi</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -163,6 +174,15 @@ if (!empty($events_data)) {
         }
         .like-btn.is-liked{ background-color:#3A2210; border-color:var(--gold); color:var(--gold-soft); }
         .like-btn{ background-color:var(--bg-2); border-color:var(--line); color:var(--slate); }
+        .free-badge{
+            display:inline-flex; align-items:center; gap:4px; padding:2px 9px; font-size:10px; font-weight:700;
+            border-radius:6px; text-transform:uppercase; letter-spacing:0.04em;
+            background-color:var(--success-bg); color:var(--success); border:1px solid transparent;
+        }
+        .daftar-btn{
+            background-color:var(--gold-bg); color:var(--gold-soft); border-color:rgba(210,167,90,0.3);
+        }
+        .peserta-btn{ background-color:var(--bg-2); border-color:var(--line); color:var(--slate); }
 
         @media print {
             @page { size: A4 portrait; margin: 18mm 15mm 18mm 15mm; }
@@ -263,6 +283,8 @@ if (!empty($events_data)) {
                     $lc = $likesCount[$eid] ?? 0;
                     $liked = isset($likedByMe[$eid]);
                     $comments = $commentsData[$eid] ?? [];
+                    $registrants = $registrantsData[$eid] ?? [];
+                    $rc = count($registrants);
                 ?>
                     <div class="ticket-card bg-[var(--surface)] rounded-2xl border border-[var(--line)] shadow-[0_2px_10px_rgba(0,0,0,0.35)] overflow-hidden">
                         <div class="punch" style="top:-6px;"></div>
@@ -288,8 +310,9 @@ if (!empty($events_data)) {
 
                                 <p class="text-[var(--slate)] text-[11px] leading-relaxed line-clamp-2"><?= htmlspecialchars($row['deskripsi']) ?></p>
 
-                                <div class="flex items-center gap-1.5">
+                                <div class="flex items-center gap-1.5 flex-wrap">
                                     <span class="cat-badge" style="background-color:<?= $cat['bg'] ?>;color:<?= $cat['text'] ?>;border-color:<?= $cat['border'] ?>;"><?= htmlspecialchars($row['kategori']) ?></span>
+                                    <span class="free-badge"><i class="fa-solid fa-circle-check"></i> Gratis / Bebas Biaya</span>
                                 </div>
 
                                 <div class="grid grid-cols-2 gap-3 text-[11px] pt-3 border-t border-dashed border-[var(--line)]">
@@ -302,7 +325,31 @@ if (!empty($events_data)) {
                                         <div class="font-semibold text-[var(--ink)] truncate"><i class="fa-solid fa-location-dot mr-1 text-[var(--gold)]"></i><?= htmlspecialchars($row['lokasi']) ?></div>
                                     </div>
                                 </div>
-                                <div class="text-[10px] font-mono font-bold text-[var(--gold-soft)] bg-[var(--bg-2)] inline-block px-2 py-1 rounded border border-[var(--line)]"><i class="fa-solid fa-users mr-1 text-[var(--gold)]"></i>Kuota: <?= isset($row['kuota']) ? $row['kuota'] : '50' ?> Peserta</div>
+                                <div class="text-[10px] font-mono font-bold text-[var(--gold-soft)] bg-[var(--bg-2)] inline-block px-2 py-1 rounded border border-[var(--line)]"><i class="fa-solid fa-users mr-1 text-[var(--gold)]"></i>Terdaftar: <?= $rc ?> / <?= isset($row['kuota']) ? $row['kuota'] : '50' ?> Peserta</div>
+
+                                <!-- Daftar & Peserta -->
+                                <div class="flex items-center gap-2">
+                                    <a href="daftar_event.php?event_id=<?= $eid ?>" class="daftar-btn flex-1 text-center flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-bold transition">
+                                        <i class="fa-solid fa-pen-nib"></i> Daftar Kegiatan
+                                    </a>
+                                    <button type="button" onclick="toggleRegistrants(<?= $eid ?>)" class="peserta-btn flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-bold transition">
+                                        <i class="fa-solid fa-user-group"></i> <span class="peserta-count-label" data-event="<?= $eid ?>"><?= $rc ?></span>
+                                    </button>
+                                </div>
+                                <div id="registrants-panel-<?= $eid ?>" class="registrants-panel hidden bg-[var(--bg-2)] rounded-lg border border-[var(--line-soft)] p-2.5 space-y-1.5 max-h-52 overflow-y-auto">
+                                    <?php foreach ($registrants as $p): ?>
+                                        <div class="registrant-item bg-[var(--surface)] rounded-lg px-3 py-2 border border-[var(--line-soft)]">
+                                            <div class="flex justify-between items-start gap-2">
+                                                <span class="text-[11px] font-bold text-[var(--gold-soft)]"><?= htmlspecialchars($p['nama']) ?></span>
+                                                <span class="text-[9px] font-bold uppercase text-[var(--slate)]"><?= htmlspecialchars($p['status_user']) ?></span>
+                                            </div>
+                                            <p class="text-[10px] text-[var(--slate)] mt-0.5"><?= htmlspecialchars($p['nama_campus']) ?> &middot; <?= htmlspecialchars($p['program_studi']) ?></p>
+                                        </div>
+                                    <?php endforeach; ?>
+                                    <?php if (empty($registrants)): ?>
+                                        <p class="text-[10px] italic text-[var(--slate-soft)]">Belum ada peserta terdaftar.</p>
+                                    <?php endif; ?>
+                                </div>
 
                                 <!-- Like & Komentar -->
                                 <div class="pt-3 border-t border-[var(--line-soft)] space-y-3" data-event-id="<?= $eid ?>">
@@ -395,6 +442,8 @@ if (!empty($events_data)) {
                                 $lc = $likesCount[$eid] ?? 0;
                                 $liked = isset($likedByMe[$eid]);
                                 $comments = $commentsData[$eid] ?? [];
+                                $registrants = $registrantsData[$eid] ?? [];
+                                $rc = count($registrants);
                             ?>
                                 <tr class="hover:bg-[var(--surface-2)]/60 transition group">
                                     <td class="px-3 py-3.5 align-top overflow-hidden print:text-slate-900">
@@ -410,10 +459,11 @@ if (!empty($events_data)) {
                                     </td>
                                     <td class="px-3 py-3.5 align-top overflow-hidden">
                                         <span class="cat-badge" style="background-color:<?= $cat['bg'] ?>;color:<?= $cat['text'] ?>;border-color:<?= $cat['border'] ?>;"><?= htmlspecialchars($row['kategori']) ?></span>
+                                        <span class="free-badge mt-1.5"><i class="fa-solid fa-circle-check"></i> Gratis</span>
                                     </td>
                                     <td class="px-3 py-3.5 align-top overflow-hidden text-[var(--ink)] print:text-slate-900">
                                         <div class="font-medium flex items-start gap-1 text-[11px] leading-snug print:text-slate-900"><i class="fa-solid fa-location-dot text-[var(--gold)] print:hidden mt-0.5"></i><span class="line-clamp-2"><?= htmlspecialchars($row['lokasi']) ?></span></div>
-                                        <div class="text-[10px] font-mono font-bold text-[var(--gold-soft)] mt-1 flex items-center gap-1 print:text-slate-700 print:font-sans"><i class="fa-solid fa-users text-[var(--gold)] print:hidden"></i><?= isset($row['kuota']) ? $row['kuota'] : '50' ?> Peserta</div>
+                                        <div class="text-[10px] font-mono font-bold text-[var(--gold-soft)] mt-1 flex items-center gap-1 print:text-slate-700 print:font-sans"><i class="fa-solid fa-users text-[var(--gold)] print:hidden"></i><?= $rc ?> / <?= isset($row['kuota']) ? $row['kuota'] : '50' ?> Peserta</div>
                                     </td>
                                     <td class="px-3 py-3.5 align-top overflow-hidden text-center">
                                         <?php if($is_aktif): ?>
@@ -423,7 +473,13 @@ if (!empty($events_data)) {
                                         <?php endif; ?>
                                     </td>
                                     <td class="px-3 py-3.5 align-top overflow-hidden text-center no-print" data-event-id="<?= $eid ?>">
-                                        <div class="flex items-center justify-center gap-1.5">
+                                        <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                                            <a href="daftar_event.php?event_id=<?= $eid ?>" title="Daftar Kegiatan" class="daftar-btn flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition">
+                                                <i class="fa-solid fa-pen-nib"></i> Daftar
+                                            </a>
+                                            <button type="button" onclick="toggleRegistrants(<?= $eid ?>)" class="peserta-btn flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition">
+                                                <i class="fa-solid fa-user-group"></i> <span class="peserta-count-label" data-event="<?= $eid ?>"><?= $rc ?></span>
+                                            </button>
                                             <button type="button" onclick="toggleLike(<?= $eid ?>, this)" class="like-btn <?= $liked ? 'is-liked' : '' ?> flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition" data-liked="<?= $liked ? '1' : '0' ?>">
                                                 <span class="like-emoji"><?= $liked ? '🔥' : '🤍' ?></span>
                                                 <span class="like-count"><?= $lc ?></span>
@@ -449,6 +505,20 @@ if (!empty($events_data)) {
                                 </tr>
                                 <tr class="no-print">
                                     <td colspan="<?= $colspan ?>" class="px-3 pb-4 pt-0 bg-[var(--surface-2)]/40">
+                                        <div id="registrants-panel-<?= $eid ?>" class="registrants-panel hidden mt-2 bg-[var(--bg-2)] rounded-xl border border-[var(--line)] p-3.5 space-y-2 max-h-56 overflow-y-auto">
+                                            <?php foreach ($registrants as $p): ?>
+                                                <div class="registrant-item bg-[var(--surface)] rounded-lg px-3 py-2 border border-[var(--line-soft)] flex justify-between items-start gap-2">
+                                                    <div>
+                                                        <span class="text-[11px] font-bold text-[var(--gold-soft)]"><?= htmlspecialchars($p['nama']) ?></span>
+                                                        <p class="text-[10px] text-[var(--slate)] mt-0.5"><?= htmlspecialchars($p['nama_campus']) ?> &middot; <?= htmlspecialchars($p['program_studi']) ?> &middot; <?= htmlspecialchars($p['fakultas']) ?></p>
+                                                    </div>
+                                                    <span class="text-[9px] font-bold uppercase text-[var(--slate)] shrink-0"><?= htmlspecialchars($p['status_user']) ?></span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                            <?php if (empty($registrants)): ?>
+                                                <p class="text-[10px] italic text-[var(--slate-soft)]">Belum ada peserta terdaftar untuk kegiatan ini.</p>
+                                            <?php endif; ?>
+                                        </div>
                                         <div id="comments-panel-<?= $eid ?>" class="comments-panel hidden mt-2 bg-[var(--bg-2)] rounded-xl border border-[var(--line)] p-3.5 space-y-2.5">
                                             <div class="comment-list space-y-2 max-h-56 overflow-y-auto pr-1">
                                                 <?php foreach ($comments as $c): ?>
@@ -520,6 +590,12 @@ if (!empty($events_data)) {
 
         function toggleComments(eventId) {
             document.querySelectorAll('#comments-panel-' + eventId).forEach(panel => {
+                panel.classList.toggle('hidden');
+            });
+        }
+
+        function toggleRegistrants(eventId) {
+            document.querySelectorAll('#registrants-panel-' + eventId).forEach(panel => {
                 panel.classList.toggle('hidden');
             });
         }
