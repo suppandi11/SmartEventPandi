@@ -9,6 +9,9 @@ if (isset($_SESSION['login'])) {
 
 $error = false;
 
+$wa_message = "Hallo kak, saya mau daftar akun Smart Event\nPilih satu: Mahasiswa / Dosen :\nNama :\nNIM :";
+$wa_link = "https://wa.me/6283822124957?text=" . rawurlencode($wa_message);
+
 if (isset($_POST['login'])) {
     $username = mysqli_real_escape_string($conn, $_POST['username']);
     $password = $_POST['password'];
@@ -112,6 +115,16 @@ if (isset($_POST['login'])) {
                 </div>
                 <button type="submit" name="login" class="w-full py-2.5 bg-[var(--maroon)] hover:bg-[var(--maroon-2)] text-white font-bold text-xs rounded-xl transition uppercase tracking-wider shadow-md shadow-black/40 cursor-pointer border-b-2 border-[var(--gold)]">Masuk Sistem</button>
             </form>
+
+            <div class="mt-5 bg-[var(--gold-bg)] border border-[var(--gold)]/30 rounded-xl p-3.5 flex items-start gap-2.5">
+                <i class="fa-solid fa-shield-halved text-[var(--gold)] text-sm mt-0.5"></i>
+                <p class="text-[11px] text-[var(--gold-soft)] leading-relaxed">
+                    Untuk menjaga keamanan sistem, jika belum memiliki akun, harap konfirmasi terlebih dahulu melalui admin.
+                    <a href="<?= $wa_link ?>" target="_blank" rel="noopener" class="inline-flex items-center gap-1 font-bold text-white bg-[#25D366] hover:bg-[#1ebe57] px-2.5 py-1 rounded-lg mt-2 transition no-underline">
+                        <i class="fa-brands fa-whatsapp"></i> WhatsApp Admin
+                    </a>
+                </p>
+            </div>
         </div>
 
         <p class="text-center text-[10px] text-[var(--slate-soft)] mt-5">&copy; <?= date('Y') ?> Smart Event Kampus</p>
